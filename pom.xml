@@ -7,11 +7,11 @@
         <version>4.1.2</version>
         <relativePath />
     </parent>
-    <groupId>br.app.coeur</groupId>
+    <groupId>br.api.universum</groupId>
     <artifactId>identity</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>identity</name>
-    <description>Coeur authentication and user identity service</description>
+    <description>Universum authentication and user identity service</description>
     <properties>
         <java.version>21</java.version>
     </properties>

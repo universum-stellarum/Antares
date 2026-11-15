@@ -1,8 +1,8 @@
 app:
   jwt:
-    issuer: https://development.coeur.app.br
+    issuer: https://development.universum.api.br
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://development.coeur.app.br}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://development.universum.api.br}
 
 springdoc:
   api-docs:
