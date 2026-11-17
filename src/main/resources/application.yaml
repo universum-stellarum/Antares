@@ -3,14 +3,13 @@ spring:
     name: antares
 
   profiles:
-    active: ${APP_ENV:dev}
+    active: ${APP_ENV}
 
   cloud:
     config:
-      # O servidor publica configuracoes por perfil e retorna 404 para default.
       profile: ${spring.profiles.active}
 
   config:
     import:
       - "optional:file:./.env[.properties]"
-      - "configserver:${CONFIG_SERVER_URL:http://100.64.10.1:8888}"
+      - "configserver:${CONFIG_SERVER_URL}"

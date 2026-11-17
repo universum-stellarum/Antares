@@ -1,4 +1,4 @@
-name: universum-antares-${APP_ENV:?Defina APP_ENV como dev ou prod}
+name: universum-antares-${APP_ENV}
 
 services:
   antares:
@@ -7,8 +7,8 @@ services:
     init: true
 
     environment:
-      SPRING_PROFILES_ACTIVE: ${APP_ENV:?Defina APP_ENV como dev ou prod}
-      CONFIG_SERVER_URL: ${CONFIG_SERVER_URL:-http://100.64.10.1:8888}
+      SPRING_PROFILES_ACTIVE: ${APP_ENV}
+      CONFIG_SERVER_URL: ${CONFIG_SERVER_URL}
 
     expose:
       - "8080"
@@ -32,4 +32,4 @@ services:
 networks:
   services:
     external: true
-    name: universum-${APP_ENV:?Defina APP_ENV como dev ou prod}
+    name: universum-${APP_ENV}
