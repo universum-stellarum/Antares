@@ -8,10 +8,7 @@ services:
 
     environment:
       SPRING_PROFILES_ACTIVE: ${APP_ENV:?Defina APP_ENV como dev ou prod}
-      SERVER_PORT: "8080"
       CONFIG_SERVER_URL: ${CONFIG_SERVER_URL:-http://100.64.10.1:8888}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?Defina as origens do frontend}
-      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
 
     expose:
       - "8080"
