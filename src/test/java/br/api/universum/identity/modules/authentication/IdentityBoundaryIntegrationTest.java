@@ -52,30 +52,30 @@ class IdentityBoundaryIntegrationTest {
     @Test
     void refreshAndLogoutWorkEvenWithAnInvalidAccessTokenHeader() throws Exception {
         var user = users.save(User.register("refresh-boundary@universum.api.br", passwords.encode("secret123"), "Refresh"));
-        var login = mvc.perform(post("/api/v1/auth/login")
+        var login = mvc.perform(post("/identity/api/v1/auth/login")
                         .header("Authorization", "Bearer expired-access-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"refresh-boundary@universum.api.br\",\"password\":\"secret123\"}"))
                 .andExpect(status().isOk()).andReturn();
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         String refresh = mapper.readTree(login.getResponse().getContentAsString()).get("refreshToken").asText();
-        var result = mvc.perform(post("/api/v1/auth/refresh")
+        var result = mvc.perform(post("/identity/api/v1/auth/refresh")
                         .header("Authorization", "Bearer expired-access-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + refresh + "\"}"))
                 .andExpect(status().isOk()).andReturn();
         String rotated = mapper.readTree(result.getResponse().getContentAsString()).get("refreshToken").asText();
         assertThat(rotated).isNotEqualTo(refresh);
-        mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/identity/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + refresh + "\"}"))
                 .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/v1/auth/logout").header("Authorization", "Bearer expired-access-token")
+        mvc.perform(post("/identity/api/v1/auth/logout").header("Authorization", "Bearer expired-access-token")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"refreshToken\":\"" + rotated + "\"}"))
                 .andExpect(status().isNoContent());
-        mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/identity/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + rotated + "\"}"))
                 .andExpect(status().isBadRequest());
-        mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + rotated))
+        mvc.perform(get("/identity/api/v1/users/me").header("Authorization", "Bearer " + rotated))
                 .andExpect(status().isUnauthorized());
     }
 }

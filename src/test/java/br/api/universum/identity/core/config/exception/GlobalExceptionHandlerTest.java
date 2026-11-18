@@ -98,7 +98,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void shouldHideInternalDetailsOnUnexpectedError(CapturedOutput output) {
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/login");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/identity/api/v1/auth/login");
         request.setQueryString("password=do-not-log-query");
         request.setContent("do-not-log-body".getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
@@ -107,7 +107,7 @@ class GlobalExceptionHandlerTest {
 
         assertThat(problem.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
         assertThat(problem.getDetail()).isEqualTo("Internal server error.");
-        assertThat(output.getOut()).contains("POST /api/v1/auth/login", "Caused by:", "missing column")
+        assertThat(output.getOut()).contains("POST /identity/api/v1/auth/login", "Caused by:", "missing column")
                 .doesNotContain("do-not-log-query", "do-not-log-body");
     }
 }

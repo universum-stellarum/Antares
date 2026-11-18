@@ -38,14 +38,14 @@ class EnvironmentIssuerIntegrationTest {
         var tokens = auth.login(new LoginRequest(user.getEmail(), "secret123"));
         assertThat(decoder.decode(tokens.accessToken()).getIssuer().toString())
                 .isEqualTo("https://development.universum.api.br");
-        mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + tokens.accessToken()))
+        mvc.perform(get("/identity/api/v1/users/me").header("Authorization", "Bearer " + tokens.accessToken()))
                 .andExpect(status().isOk());
 
         var now = Instant.now();
         var claims = JwtClaimsSet.builder().issuer("https://production.universum.api.br")
                 .subject(user.getId().toString()).issuedAt(now).expiresAt(now.plusSeconds(900)).build();
         String wrongEnvironment = encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-        mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + wrongEnvironment))
+        mvc.perform(get("/identity/api/v1/users/me").header("Authorization", "Bearer " + wrongEnvironment))
                 .andExpect(status().isUnauthorized());
     }
 }

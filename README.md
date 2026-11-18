@@ -13,8 +13,8 @@ Java 21 · Spring Boot 4.1.2 · Spring Security · Spring Data JPA · PostgreSQL
 
 ## Responsabilidades
 
-- Cadastro, leitura, atualização e remoção de usuários (`/api/v1/users`).
-- Login, renovação e logout (`/api/v1/auth`).
+- Cadastro, leitura, atualização e remoção de usuários (`/identity/api/v1/users`).
+- Login, renovação e logout (`/identity/api/v1/auth`).
 - Assinatura dos access tokens JWT com RS256. Somente este serviço tem a chave privada.
 - Publicação das chaves públicas em `/.well-known/jwks.json`.
 - Bloqueio temporário de conta após tentativas de senha inválidas.
@@ -27,16 +27,16 @@ login, renovação e logout.
 
 | Método | Caminho | Acesso | Descrição |
 | --- | --- | --- | --- |
-| `POST` | `/api/v1/users/register` | público | Cadastro de usuário |
-| `POST` | `/api/v1/auth/login` | público | Retorna access token e refresh token |
-| `POST` | `/api/v1/auth/refresh` | público | Rotaciona o refresh token e emite novo par |
-| `POST` | `/api/v1/auth/logout` | público | Revoga o refresh token informado |
+| `POST` | `/identity/api/v1/users/register` | público | Cadastro de usuário |
+| `POST` | `/identity/api/v1/auth/login` | público | Retorna access token e refresh token |
+| `POST` | `/identity/api/v1/auth/refresh` | público | Rotaciona o refresh token e emite novo par |
+| `POST` | `/identity/api/v1/auth/logout` | público | Revoga o refresh token informado |
 | `GET` | `/.well-known/jwks.json` | público | Chave pública para validação dos JWT |
-| `GET` | `/api/v1/users/me` | autenticado | Dados do usuário do token |
-| `PUT` | `/api/v1/users/me` | autenticado | Atualiza o próprio usuário |
-| `GET` | `/api/v1/users` | autenticado | Lista usuários |
-| `GET` / `PUT` / `DELETE` | `/api/v1/users/{id}` | autenticado | Consulta, altera ou remove um usuário |
-| `POST` | `/api/v1/auth/keys` | autenticado | Gerenciamento de chaves de assinatura |
+| `GET` | `/identity/api/v1/users/me` | autenticado | Dados do usuário do token |
+| `PUT` | `/identity/api/v1/users/me` | autenticado | Atualiza o próprio usuário |
+| `GET` | `/identity/api/v1/users` | autenticado | Lista usuários |
+| `GET` / `PUT` / `DELETE` | `/identity/api/v1/users/{id}` | autenticado | Consulta, altera ou remove um usuário |
+| `POST` | `/identity/api/v1/auth/keys` | autenticado | Gerenciamento de chaves de assinatura |
 | `GET` | `/health` | público | Health check |
 
 ## Tokens

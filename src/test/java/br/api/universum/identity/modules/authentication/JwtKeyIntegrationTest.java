@@ -68,11 +68,11 @@ class JwtKeyIntegrationTest {
 
     @Test
     void rotationRequiresAuthenticationAndNeverReturnsPrivateMaterial() throws Exception {
-        mvc.perform(post("/api/v1/auth/keys")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/identity/api/v1/auth/keys")).andExpect(status().isUnauthorized());
         var user = users.save(User.register("keys@universum.api.br", passwords.encode("secret123"), "Keys"));
         var tokens = auth.login(new LoginRequest(user.getEmail(), "secret123"));
         String oldId = repository.findById(1).orElseThrow().getKeyId().toString();
-        mvc.perform(post("/api/v1/auth/keys").header("Authorization", "Bearer " + tokens.accessToken()))
+        mvc.perform(post("/identity/api/v1/auth/keys").header("Authorization", "Bearer " + tokens.accessToken()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.keyId").isNotEmpty())
                 .andExpect(jsonPath("$.algorithm").value("RS256"))
@@ -80,10 +80,10 @@ class JwtKeyIntegrationTest {
                 .andExpect(jsonPath("$.privateKey").doesNotExist())
                 .andExpect(jsonPath("$.publicKey").doesNotExist());
         assertThat(repository.findById(1).orElseThrow().getKeyId().toString()).isNotEqualTo(oldId);
-        mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + tokens.accessToken()))
+        mvc.perform(get("/identity/api/v1/users/me").header("Authorization", "Bearer " + tokens.accessToken()))
                 .andExpect(status().isUnauthorized());
         var renewed = auth.refresh(new RefreshTokenRequest(tokens.refreshToken()));
-        mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + renewed.accessToken()))
+        mvc.perform(get("/identity/api/v1/users/me").header("Authorization", "Bearer " + renewed.accessToken()))
                 .andExpect(status().isOk());
     }
 

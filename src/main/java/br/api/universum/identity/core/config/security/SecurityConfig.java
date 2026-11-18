@@ -31,7 +31,7 @@ public class SecurityConfig {
         // A stale Authorization header must not prevent login, refresh or logout.
         statelessApi(http, corsConfigurationSource, rateLimitingFilter)
                 .securityMatchers(matchers -> matchers.requestMatchers(HttpMethod.POST,
-                        "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout"))
+                        "/identity/api/v1/auth/login", "/identity/api/v1/auth/refresh", "/identity/api/v1/auth/logout"))
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll());
         return http.build();
     }
