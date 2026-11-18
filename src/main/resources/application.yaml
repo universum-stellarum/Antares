@@ -1,15 +1,15 @@
 spring:
   application:
-    name: antares
+    name: identity
 
   profiles:
     active: ${APP_ENV}
-
-  cloud:
-    config:
-      profile: ${spring.profiles.active}
 
   config:
     import:
       - "optional:file:./.env[.properties]"
       - "configserver:${CONFIG_SERVER_URL}"
+  cloud:
+    config:
+      profile: ${spring.profiles.active}
+

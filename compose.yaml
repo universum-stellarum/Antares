@@ -1,7 +1,7 @@
-name: universum-antares-${APP_ENV}
+name: universum-identity-${APP_ENV}
 
 services:
-  antares:
+  identity:
     build: .
     restart: unless-stopped
     init: true
@@ -16,7 +16,7 @@ services:
     networks:
       services:
         aliases:
-          - antares
+          - identity
 
     read_only: true
 
