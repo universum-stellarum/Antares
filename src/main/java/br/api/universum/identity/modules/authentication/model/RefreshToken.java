@@ -27,8 +27,9 @@ public class RefreshToken extends BaseEntity<UUID> {
     @UuidGenerator
     private UUID id;
 
-    @Column(nullable = false, unique = true)
-    private String token;
+    /** SHA-256 em hex do refresh token. O valor original nunca é persistido. */
+    @Column(name = "token_hash", nullable = false, unique = true)
+    private String tokenHash;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
@@ -39,23 +40,19 @@ public class RefreshToken extends BaseEntity<UUID> {
     @Column(nullable = false)
     private boolean revoked;
 
-    private RefreshToken(String token, UUID userId, Instant expiryDate) {
-        this.token = token;
+    private RefreshToken(String tokenHash, UUID userId, Instant expiryDate) {
+        this.tokenHash = tokenHash;
         this.userId = userId;
         this.expiryDate = expiryDate;
         this.revoked = false;
     }
 
-    public static RefreshToken issue(String token, UUID userId, Instant now, Duration validFor) {
-        return new RefreshToken(token, userId, now.plus(validFor));
+    public static RefreshToken issue(String tokenHash, UUID userId, Instant now, Duration validFor) {
+        return new RefreshToken(tokenHash, userId, now.plus(validFor));
     }
 
     public boolean isExpired(Instant now) {
         return !expiryDate.isAfter(now);
-    }
-
-    public boolean isValid(Instant now) {
-        return !revoked && !isExpired(now);
     }
 
     public void revoke() {

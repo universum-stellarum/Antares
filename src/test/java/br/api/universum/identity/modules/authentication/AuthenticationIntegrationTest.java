@@ -347,11 +347,15 @@ class AuthenticationIntegrationTest {
     @Autowired
     private br.api.universum.identity.modules.authentication.repository.RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    private br.api.universum.identity.modules.authentication.service.TokenService tokenService;
+
     @Test
     void onlyOneConcurrentRefreshCanConsumeTheToken() throws Exception {
         User user = userRepository.save(User.register("concurrent@universum.api.br", "unused", "Concurrent"));
         refreshTokenRepository.save(br.api.universum.identity.modules.authentication.model.RefreshToken.issue(
-                "concurrent-refresh", user.getId(), java.time.Instant.now(), java.time.Duration.ofDays(1)));
+                tokenService.hashRefreshToken("concurrent-refresh"), user.getId(),
+                java.time.Instant.now(), java.time.Duration.ofDays(1)));
         var start = new java.util.concurrent.CountDownLatch(1);
         try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
             java.util.concurrent.Callable<Boolean> attempt = () -> {
@@ -376,7 +380,8 @@ class AuthenticationIntegrationTest {
     void logoutRevokesRefreshTokenAndIsIdempotent() throws Exception {
         User user = userRepository.save(User.register("logout@universum.api.br", "unused", "Logout"));
         refreshTokenRepository.save(br.api.universum.identity.modules.authentication.model.RefreshToken.issue(
-                "logout-refresh", user.getId(), java.time.Instant.now(), java.time.Duration.ofDays(1)));
+                tokenService.hashRefreshToken("logout-refresh"), user.getId(),
+                java.time.Instant.now(), java.time.Duration.ofDays(1)));
         String body = "{\"refreshToken\":\"logout-refresh\"}";
         for (int i = 0; i < 2; i++) {
             mockMvc.perform(post("/api/v1/auth/logout").contentType(MediaType.APPLICATION_JSON).content(body))

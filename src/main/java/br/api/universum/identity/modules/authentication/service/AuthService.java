@@ -46,17 +46,32 @@ public class AuthService {
         return issueTokens(user);
     }
 
-    @Transactional
+    // noRollbackFor: a revogação de todas as sessões em caso de reuso precisa ser persistida,
+    // mesmo com a InvalidRefreshTokenException lançada em seguida.
+    @Transactional(noRollbackFor = BusinessException.class)
     public TokenResponse refresh(RefreshTokenRequest request) {
-        RefreshToken oldToken = refreshTokenRepository.findByToken(request.refreshToken())
-                .filter(token -> token.isValid(Instant.now()))
+        String tokenHash = tokenService.hashRefreshToken(request.refreshToken());
+        RefreshToken current = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(InvalidRefreshTokenException::new);
 
-        User user = userRepository.findById(oldToken.getUserId()).orElseThrow(
+        if (current.isRevoked()) {
+            // Um refresh token já rotacionado voltou a ser apresentado: provável roubo.
+            // Encerra todas as sessões do usuário, e o cliente precisa fazer login de novo.
+            log.warn("[REFRESH] Reuso de refresh token revogado. Sessões do usuário {} encerradas",
+                    current.getUserId());
+            refreshTokenRepository.revokeAllByUserId(current.getUserId());
+            throw new InvalidRefreshTokenException();
+        }
+
+        if (current.isExpired(Instant.now())) {
+            throw new InvalidRefreshTokenException();
+        }
+
+        User user = userRepository.findById(current.getUserId()).orElseThrow(
                 UserNotFoundException::new
         );
 
-        oldToken.revoke();
+        current.revoke();
 
         if (user.isLocked(Instant.now())) {
             throw new UserBlockedException();
@@ -67,7 +82,8 @@ public class AuthService {
 
     @Transactional
     public void logout(RefreshTokenRequest request) {
-        refreshTokenRepository.findByToken(request.refreshToken()).ifPresent(RefreshToken::revoke);
+        String tokenHash = tokenService.hashRefreshToken(request.refreshToken());
+        refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(RefreshToken::revoke);
     }
 
     private User verifyCredentials(String email, String rawPassword) {
@@ -113,7 +129,7 @@ public class AuthService {
 
         refreshTokenRepository.save(
                 RefreshToken.issue(
-                        refreshTokenValue,
+                        tokenService.hashRefreshToken(refreshTokenValue),
                         user.getId(),
                         Instant.now(),
                         REFRESH_TOKEN_VALIDITY

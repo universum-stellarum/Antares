@@ -15,45 +15,42 @@ class RefreshTokenTest {
     private static final UUID USER_ID = UUID.randomUUID();
 
     @Test
-    void issueShouldCreateNonRevokedTokenExpiringAfterValidity() {
-        RefreshToken token = RefreshToken.issue("abc", USER_ID, NOW, VALIDITY);
+    void issueShouldStoreHashAndCreateNonRevokedTokenExpiringAfterValidity() {
+        RefreshToken token = RefreshToken.issue("hash-abc", USER_ID, NOW, VALIDITY);
 
-        assertThat(token.getToken()).isEqualTo("abc");
+        assertThat(token.getTokenHash()).isEqualTo("hash-abc");
         assertThat(token.getUserId()).isEqualTo(USER_ID);
         assertThat(token.getExpiryDate()).isEqualTo(NOW.plus(VALIDITY));
         assertThat(token.isRevoked()).isFalse();
     }
 
     @Test
-    void shouldBeValidBeforeExpiry() {
-        RefreshToken token = RefreshToken.issue("abc", USER_ID, NOW, VALIDITY);
+    void shouldNotBeExpiredBeforeExpiry() {
+        RefreshToken token = RefreshToken.issue("hash-abc", USER_ID, NOW, VALIDITY);
 
         assertThat(token.isExpired(NOW.plus(Duration.ofDays(6)))).isFalse();
-        assertThat(token.isValid(NOW.plus(Duration.ofDays(6)))).isTrue();
     }
 
     @Test
-    void shouldBeInvalidAfterExpiry() {
-        RefreshToken token = RefreshToken.issue("abc", USER_ID, NOW, VALIDITY);
-        Instant afterExpiry = NOW.plus(VALIDITY).plusSeconds(1);
+    void shouldBeExpiredAfterValidity() {
+        RefreshToken token = RefreshToken.issue("hash-abc", USER_ID, NOW, VALIDITY);
 
-        assertThat(token.isExpired(afterExpiry)).isTrue();
-        assertThat(token.isValid(afterExpiry)).isFalse();
+        assertThat(token.isExpired(NOW.plus(VALIDITY).plusSeconds(1))).isTrue();
     }
 
     @Test
-    void shouldBeInvalidAtExactExpiry() {
-        RefreshToken token = RefreshToken.issue("abc", USER_ID, NOW, VALIDITY);
-        assertThat(token.isValid(NOW.plus(VALIDITY))).isFalse();
+    void shouldBeExpiredAtExactExpiry() {
+        RefreshToken token = RefreshToken.issue("hash-abc", USER_ID, NOW, VALIDITY);
+
+        assertThat(token.isExpired(NOW.plus(VALIDITY))).isTrue();
     }
 
     @Test
-    void revokeShouldMakeTokenInvalid() {
-        RefreshToken token = RefreshToken.issue("abc", USER_ID, NOW, VALIDITY);
+    void revokeShouldMarkTokenAsRevoked() {
+        RefreshToken token = RefreshToken.issue("hash-abc", USER_ID, NOW, VALIDITY);
 
         token.revoke();
 
         assertThat(token.isRevoked()).isTrue();
-        assertThat(token.isValid(NOW)).isFalse();
     }
 }

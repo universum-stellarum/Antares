@@ -28,6 +28,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -58,6 +60,12 @@ class AuthServiceTest {
     void setUp() {
         user = User.register("john@universum.api.br", "encoded", "John");
         ReflectionTestUtils.setField(user, "id", USER_ID);
+        // Hash previsível para os testes: "hash:" + valor bruto.
+        lenient().when(tokenService.hashRefreshToken(anyString())).thenAnswer(i -> hash(i.getArgument(0)));
+    }
+
+    private static String hash(String raw) {
+        return "hash:" + raw;
     }
 
     private void stubTokenGeneration() {
@@ -84,9 +92,10 @@ class AuthServiceTest {
         verify(refreshTokenRepository).revokeAllByUserId(USER_ID);
         ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokenRepository).save(captor.capture());
-        assertThat(captor.getValue().getToken()).isEqualTo("refresh-token");
+        // O banco guarda o hash, nunca o valor entregue ao cliente.
+        assertThat(captor.getValue().getTokenHash()).isEqualTo(hash("refresh-token"));
         assertThat(captor.getValue().getUserId()).isEqualTo(USER_ID);
-        assertThat(captor.getValue().isValid(Instant.now())).isTrue();
+        assertThat(captor.getValue().isExpired(Instant.now())).isFalse();
     }
 
     @Test
@@ -163,19 +172,21 @@ class AuthServiceTest {
 
     @Test
     void refreshShouldRejectLockedUser() {
-        RefreshToken token = RefreshToken.issue("locked-token", USER_ID, Instant.now(), Duration.ofDays(7));
+        RefreshToken token = RefreshToken.issue(hash("locked-token"), USER_ID, Instant.now(), Duration.ofDays(7));
         ReflectionTestUtils.setField(user, "lockExpiredAt", Instant.now().plusSeconds(60));
-        when(refreshTokenRepository.findByToken("locked-token")).thenReturn(Optional.of(token));
+        when(refreshTokenRepository.findByTokenHash(hash("locked-token"))).thenReturn(Optional.of(token));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
         assertThatThrownBy(() -> authService.refresh(new RefreshTokenRequest("locked-token")))
                 .isInstanceOf(br.api.universum.identity.modules.user.exception.UserBlockedException.class);
+
         verify(refreshTokenRepository, never()).save(any());
     }
 
     @Test
     void refreshShouldRotateTokens() {
-        RefreshToken oldToken = RefreshToken.issue("old-token", USER_ID, Instant.now(), Duration.ofDays(7));
-        when(refreshTokenRepository.findByToken("old-token")).thenReturn(Optional.of(oldToken));
+        RefreshToken oldToken = RefreshToken.issue(hash("old-token"), USER_ID, Instant.now(), Duration.ofDays(7));
+        when(refreshTokenRepository.findByTokenHash(hash("old-token"))).thenReturn(Optional.of(oldToken));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         stubTokenGeneration();
 
@@ -188,13 +199,13 @@ class AuthServiceTest {
 
         ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokenRepository).save(captor.capture());
-        assertThat(captor.getValue().getToken()).isEqualTo("refresh-token");
+        assertThat(captor.getValue().getTokenHash()).isEqualTo(hash("refresh-token"));
         assertThat(captor.getValue().getUserId()).isEqualTo(USER_ID);
     }
 
     @Test
     void refreshShouldFailWhenTokenDoesNotExist() {
-        when(refreshTokenRepository.findByToken("unknown")).thenReturn(Optional.empty());
+        when(refreshTokenRepository.findByTokenHash(hash("unknown"))).thenReturn(Optional.empty());
         RefreshTokenRequest request = new RefreshTokenRequest("unknown");
 
         assertThatThrownBy(() -> authService.refresh(request))
@@ -203,23 +214,26 @@ class AuthServiceTest {
     }
 
     @Test
-    void refreshShouldFailWhenTokenIsRevoked() {
-        RefreshToken revoked = RefreshToken.issue("revoked-token", USER_ID, Instant.now(), Duration.ofDays(7));
+    void refreshShouldRevokeAllSessionsWhenRevokedTokenIsReused() {
+        RefreshToken revoked = RefreshToken.issue(hash("reused-token"), USER_ID, Instant.now(), Duration.ofDays(7));
         revoked.revoke();
-        when(refreshTokenRepository.findByToken("revoked-token")).thenReturn(Optional.of(revoked));
-        RefreshTokenRequest request = new RefreshTokenRequest("revoked-token");
+        when(refreshTokenRepository.findByTokenHash(hash("reused-token"))).thenReturn(Optional.of(revoked));
+        RefreshTokenRequest request = new RefreshTokenRequest("reused-token");
 
         assertThatThrownBy(() -> authService.refresh(request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Refresh token is invalid, revoked, or expired.");
 
+        // Reuso de token já rotacionado: todas as sessões do usuário são encerradas.
+        verify(refreshTokenRepository).revokeAllByUserId(USER_ID);
         verify(refreshTokenRepository, never()).save(any());
     }
 
     @Test
     void refreshShouldFailWhenTokenIsExpired() {
-        RefreshToken expired = RefreshToken.issue("expired-token", USER_ID, Instant.now().minus(Duration.ofDays(10)), Duration.ofDays(7));
-        when(refreshTokenRepository.findByToken("expired-token")).thenReturn(Optional.of(expired));
+        RefreshToken expired = RefreshToken.issue(hash("expired-token"), USER_ID,
+                Instant.now().minus(Duration.ofDays(10)), Duration.ofDays(7));
+        when(refreshTokenRepository.findByTokenHash(hash("expired-token"))).thenReturn(Optional.of(expired));
         RefreshTokenRequest request = new RefreshTokenRequest("expired-token");
 
         assertThatThrownBy(() -> authService.refresh(request))
@@ -231,8 +245,8 @@ class AuthServiceTest {
 
     @Test
     void refreshShouldFailWhenUserNoLongerExists() {
-        RefreshToken token = RefreshToken.issue("orphan-token", USER_ID, Instant.now(), Duration.ofDays(7));
-        when(refreshTokenRepository.findByToken("orphan-token")).thenReturn(Optional.of(token));
+        RefreshToken token = RefreshToken.issue(hash("orphan-token"), USER_ID, Instant.now(), Duration.ofDays(7));
+        when(refreshTokenRepository.findByTokenHash(hash("orphan-token"))).thenReturn(Optional.of(token));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
         RefreshTokenRequest request = new RefreshTokenRequest("orphan-token");
 
